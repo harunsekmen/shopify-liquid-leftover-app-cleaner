@@ -1,17 +1,41 @@
 #!/usr/bin/env node
+
+/**
+ * Shopify Theme AST & App Code Cleaner
+ *
+ * @author Harun Sekmen <sekmenwp@gmail.com>
+ */
 class ThemeCleaner {
-  static scanTheme(liquidContent) {
-    const knownAppPatterns = [
-      /<!-- BEGIN [a-zA-Z0-9_-]+ APP -->[\s\S]*?<!-- END [a-zA-Z0-9_-]+ APP -->/gi,
-      /{%\s*render\s*['"][a-zA-Z0-9_-]*(judge|loox|klaviyo|privy|yotpo)[a-zA-Z0-9_-]*['"]\s*%}/gi,
-      /<script[^>]*src=['"][^'"]*apps\/[^'"]*['"][^>]*><\/script>/gi
+  static getKnownAppSignatures() {
+    return [
+      { app: 'Loox Reviews', regex: new RegExp("{%\\s*render\\s*['\"][a-zA-Z0-9_-]*loox[a-zA-Z0-9_-]*['\"]\\s*%}", "gi") },
+      { app: 'Judge.me', regex: new RegExp("{%\\s*render\\s*['\"][a-zA-Z0-9_-]*judgeme[a-zA-Z0-9_-]*['\"]\\s*%}", "gi") },
+      { app: 'Klaviyo', regex: new RegExp("<script[^>]*src=['\"][^'\"]*klaviyo\\.js[^'\"]*['\"][^>]*><\\/script>", "gi") },
+      { app: 'Yotpo', regex: new RegExp("<script[^>]*src=['\"][^'\"]*yotpo\\.com[^'\"]*['\"][^>]*><\\/script>", "gi") },
+      { app: 'Privy', regex: new RegExp("<script[^>]*src=['\"][^'\"]*privy\\.com[^'\"]*['\"][^>]*><\\/script>", "gi") }
     ];
-    let detected = [];
-    knownAppPatterns.forEach(regex => {
-      const matches = liquidContent.match(regex);
-      if (matches) detected = detected.concat(matches);
+  }
+
+  static scanContent(liquidText) {
+    const findings = [];
+    this.getKnownAppSignatures().forEach(sig => {
+      const matches = liquidText.match(sig.regex);
+      if (matches) {
+        matches.forEach(m => {
+          findings.push({ app: sig.app, match: m.trim() });
+        });
+      }
     });
-    return detected;
+    return findings;
+  }
+
+  static stripLeftovers(liquidText) {
+    let cleaned = liquidText;
+    this.getKnownAppSignatures().forEach(sig => {
+      cleaned = cleaned.replace(sig.regex, '');
+    });
+    return cleaned;
   }
 }
+
 if (typeof module !== 'undefined') module.exports = ThemeCleaner;
